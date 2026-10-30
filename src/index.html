@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AutoClicker Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:         #0d0d0f;
+    --surface:    #141417;
+    --panel:      #1a1a1f;
+    --border:     #2a2a35;
+    --accent:     #00e5ff;
+    --accent2:    #ff3d71;
+    --accent3:    #a855f7;
+    --green:      #00ff88;
+    --text:       #e8e8f0;
+    --muted:      #606075;
+    --font-mono:  'Share Tech Mono', monospace;
+    --font-ui:    'Rajdhani', sans-serif;
+    --radius:     6px;
+    --glow:       0 0 12px rgba(0,229,255,0.35);
+    --glow-red:   0 0 12px rgba(255,61,113,0.4);
+    --glow-green: 0 0 14px rgba(0,255,136,0.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-ui);
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── Titlebar ─────────────────────────────────────────── */
+  #titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 38px;
+    padding: 0 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    -webkit-app-region: drag;
+    flex-shrink: 0;
+  }
+  .title-left { display: flex; align-items: center; gap: 10px; }
+  .logo-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: var(--glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:.5; transform:scale(1.3); }
+  }
+  .title-text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .title-version { font-size: 10px; color: var(--muted); font-family: var(--font-mono); }
+  .win-controls { display: flex; gap: 8px; -webkit-app-region: no-drag; }
+  .win-btn {
+    width: 28px; height: 28px; border-radius: 4px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    transition: all .15s;
+  }
+  .win-btn:hover { background: var(--panel); color: var(--text); }
+  .win-btn.close:hover { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+
+  /* ── Hotkey bar ───────────────────────────────────────── */
+  #hotkeys {
+    display: flex; gap: 6px; align-items: center;
+    padding: 6px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .hk { display: flex; align-items: center; gap: 5px; }
+  .hk kbd {
+    padding: 1px 6px; border-radius: 3px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+  .hk-sep { color: var(--border); }
+
+  /* ── Tabs ─────────────────────────────────────────────── */
+  #tabs {
+    display: flex;
+    padding: 0 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .tab {
+    padding: 10px 22px;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all .15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── Main layout ──────────────────────────────────────── */
+  #content { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  #content::-webkit-scrollbar { width: 4px; }
+  #content::-webkit-scrollbar-track { background: transparent; }
+  #content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .tab-panel { display: none; flex-direction: column; gap: 14px; }
+  .tab-panel.active { display: flex; }
+
+  /* ── Cards ────────────────────────────────────────────── */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::before {
+    content: '';
+    display: block;
+    width: 3px; height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  /* ── Grid helpers ─────────────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* ── Form elements ────────────────────────────────────── */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  input[type=number], input[type=text], select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    width: 100%;
+  }
+  input[type=number]:focus, input[type=text]:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,229,255,.12);
+  }
+  select option { background: var(--panel); }
+
+  /* ── Segmented control ────────────────────────────────── */
+  .seg-group { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .seg-btn {
+    flex: 1; padding: 8px 6px;
+    background: var(--surface);
+    border: none;
+    color: var(--muted);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .5px;
+    cursor: pointer;
+    transition: all .15s;
+    border-right: 1px solid var(--border);
+  }
+  .seg-btn:last-child { border-right: none; }
+  .seg-btn:hover { background: var(--panel); color: var(--text); }
+  .seg-btn.active { background: var(--accent); color: #000; }
+  .seg-btn.active-red { background: var(--accent2); color: #fff; }
+
+  /* ── Big action button ────────────────────────────────── */
+  .btn-action {
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--radius);
+    border: 1px solid;
+    font-family: var(--font-ui);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-start {
+    background: transparent;
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .btn-start:hover, .btn-start.running {
+    background: var(--green);
+    color: #000;
+    box-shadow: var(--glow-green);
+  }
+  .btn-stop {
+    background: transparent;
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+  .btn-stop:hover {
+    background: var(--accent2);
+    color: #fff;
+    box-shadow: var(--glow-red);
+  }
+  .btn-action:disabled { opacity: .35; cursor: not-allowed; }
+  .btn-secondary {
+    flex: 1; padding: 10px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-secondary.danger:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── Status display ───────────────────────────────────── */
+  .status-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    transition: background .3s, box-shadow .3s;
+    flex-shrink: 0;
+  }
+  .status-dot.active-green { background: var(--green); box-shadow: var(--glow-green); animation: pulse 1s infinite; }
+  .status-dot.active-red   { background: var(--accent2); box-shadow: var(--glow-red); animation: pulse .7s infinite; }
+  .status-label { color: var(--muted); }
+  .status-value { color: var(--text); margin-left: auto; }
+  .status-value.highlight { color: var(--accent); }
+
+  /* ── Counter ──────────────────────────────────────────── */
+  .counter-display {
+    font-family: var(--font-mono);
+    font-size: 36px;
+    color: var(--accent);
+    text-align: center;
+    padding: 12px;
+    text-shadow: var(--glow);
+    letter-spacing: 4px;
+  }
+
+  /* ── Macro event list ─────────────────────────────────── */
+  #event-list {
+    max-height: 160px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  #event-list::-webkit-scrollbar { width: 3px; }
+  #event-list::-webkit-scrollbar-thumb { background: var(--border); }
+  .event-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(42,42,53,.5);
+    color: var(--muted);
+  }
+  .event-item:last-child { border-bottom: none; }
+  .event-type { color: var(--accent); min-width: 80px; }
+  .event-coords { color: var(--text); }
+  .event-delay { color: var(--accent3); margin-left: auto; }
+  .event-del {
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 11px; padding: 0 2px;
+  }
+  .event-del:hover { color: var(--accent2); }
+  .event-type.key { color: var(--green); }
+
+  /* ── Hotkey editor ────────────────────────────────────── */
+  .hotkey-row { display: grid; grid-template-columns: 1fr 180px auto; gap: 10px; align-items: center; }
+  .hotkey-btn {
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .hotkey-btn:hover { border-color: var(--accent); }
+  .hotkey-btn.capturing { border-color: var(--accent3); color: var(--accent3); box-shadow: 0 0 0 2px rgba(168,85,247,.15); }
+  .hotkey-btn.failed { border-color: var(--accent2); color: var(--accent2); }
+  .hotkey-reset { flex: none; padding: 8px 12px; font-size: 11px; }
+
+  /* ── Perfis ───────────────────────────────────────────── */
+  .profile-row { display: grid; grid-template-columns: 1fr 110px 90px; gap: 10px; align-items: center; }
+  input[type=text] { font-family: var(--font-ui); font-size: 14px; user-select: text; }
+
+  /* ── Checkbox toggle ──────────────────────────────────── */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+  .toggle { position: relative; width: 38px; height: 20px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .toggle-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: all .2s;
+    pointer-events: none;
+  }
+  .toggle input:checked ~ .toggle-track { background: var(--accent); }
+  .toggle input:checked ~ .toggle-thumb { left: 21px; background: #000; }
+
+  /* ── Info badge ────────────────────────────────────────── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .badge-cyan  { background: rgba(0,229,255,.15); color: var(--accent); border: 1px solid rgba(0,229,255,.25); }
+  .badge-red   { background: rgba(255,61,113,.15); color: var(--accent2); border: 1px solid rgba(255,61,113,.25); }
+  .badge-green { background: rgba(0,255,136,.12); color: var(--green); border: 1px solid rgba(0,255,136,.2); }
+
+  /* ── Divider ──────────────────────────────────────────── */
+  .divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+  /* ── Row flex ─────────────────────────────────────────── */
+  .row { display: flex; gap: 10px; align-items: center; }
+
+  /* ── Cursor picker ────────────────────────────────────── */
+  #cursor-indicator {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    padding: 6px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-width: 130px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Titlebar -->
+<div id="titlebar">
+  <div class="title-left">
+    <div class="logo-dot"></div>
+    <span class="title-text">AutoClicker Pro</span>
+    <span class="title-version">v1.1</span>
+  </div>
+  <div class="win-controls">
+    <button class="win-btn" onclick="window.api.minimize()">─</button>
+    <button class="win-btn" onclick="window.api.maximize()">□</button>
+    <button class="win-btn close" onclick="window.api.close()">✕</button>
+  </div>
+</div>
+
+<!-- Hotkey hints -->
+<div id="hotkeys">
+  <div class="hk"><kbd id="hk-autoclicker">F6</kbd><span>Autoclicker</span></div>
+  <span class="hk-sep">│</span>
+  <div class="hk"><kbd id="hk-record">F7</kbd><span>Gravar Macro</span></div>
+  <span class="hk-sep">│</span>
+  <div class="hk"><kbd id="hk-play">F8</kbd><span>Reproduzir Macro</span></div>
+  <div class="hk" style="margin-left:auto">Perfil: <span id="active-profile" style="color:var(--accent3)">—</span></div>
+</div>
+
+<!-- Tabs -->
+<div id="tabs">
+  <div class="tab active" data-tab="autoclicker">Autoclicker</div>
+  <div class="tab" data-tab="macro">Macro</div>
+  <div class="tab" data-tab="schedule">Agendamento</div>
+  <div class="tab" data-tab="settings">Definições</div>
+</div>
+
+<!-- Content -->
+<div id="content">
+
+  <!-- ══════════════════════════════════ AUTOCLICKER TAB -->
+  <div class="tab-panel active" id="tab-autoclicker">
+
+    <!-- Status + Counter -->
+    <div class="card">
+      <div class="card-title">Estado</div>
+      <div class="status-row" id="ac-status-row">
+        <div class="status-dot" id="ac-dot"></div>
+        <span class="status-label" id="ac-status-label">PARADO</span>
+        <span class="status-value highlight"><span id="ac-cps">0</span> CPS</span>
+        <span class="status-value">Cliques: <span id="ac-count">0</span></span>
+      </div>
+      <div class="counter-display" id="ac-counter">000000</div>
+    </div>
+
+    <!-- Click type -->
+    <div class="card">
+      <div class="card-title">Tipo de Clique</div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Botão</label>
+          <div class="seg-group" id="btn-group">
+            <button class="seg-btn active" data-val="left">Esquerdo</button>
+            <button class="seg-btn" data-val="right">Direito</button>
+            <button class="seg-btn" data-val="middle">Médio</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Modo</label>
+          <div class="seg-group" id="click-mode-group">
+            <button class="seg-btn active" data-val="single">Simples</button>
+            <button class="seg-btn" data-val="double">Duplo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interval -->
+    <div class="card">
+      <div class="card-title">Intervalo</div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Modo de intervalo</label>
+        <div class="seg-group" id="interval-mode-group">
+          <button class="seg-btn active" data-val="fixed">Fixo</button>
+          <button class="seg-btn" data-val="random">Aleatório (humano)</button>
+        </div>
+      </div>
+      <div id="fixed-interval">
+        <div class="field">
+          <label>Intervalo (ms)</label>
+          <input type="number" id="interval-ms" value="100" min="1" max="60000"/>
+        </div>
+      </div>
+      <div id="random-interval" style="display:none">
+        <div class="grid-2">
+          <div class="field">
+            <label>Mínimo (ms)</label>
+            <input type="number" id="interval-min" value="50" min="1" max="60000"/>
+          </div>
+          <div class="field">
+            <label>Máximo (ms)</label>
+            <input type="number" id="interval-max" value="300" min="1" max="60000"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Position -->
+    <div class="card">
+      <div class="card-title">Posição</div>
+      <div class="toggle-row" style="margin-bottom:10px">
+        <label>Usar posição atual do cursor</label>
+        <label class="toggle">
+          <input type="checkbox" id="use-current-pos" checked/>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div id="fixed-pos-fields" style="display:none">
+        <div class="grid-2">
+          <div class="field">
+            <label>X</label>
+            <input type="number" id="target-x" value="0"/>
+          </div>
+          <div class="field">
+            <label>Y</label>
+            <input type="number" id="target-y" value="0"/>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn-secondary" id="pick-pos-btn" style="flex:none;padding:8px 14px;font-size:11px">
+            📍 Capturar posição actual
+          </button>
+          <span id="cursor-indicator">X: — Y: —</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start/Stop -->
+    <div class="row">
+      <button class="btn-action btn-start" id="ac-start-btn" onclick="toggleAutoclicker()">
+        ▶ INICIAR
+      </button>
+    </div>
+  </div><!-- /autoclicker tab -->
+
+
+  <!-- ══════════════════════════════════ MACRO TAB -->
+  <div class="tab-panel" id="tab-macro">
+
+    <!-- Macro status -->
+    <div class="card">
+      <div class="card-title">Estado da Macro</div>
+      <div class="status-row">
+        <div class="status-dot" id="macro-dot"></div>
+        <span id="macro-status-label">INATIVO</span>
+        <span class="status-value">Eventos: <span id="macro-event-count">0</span></span>
+        <span id="macro-badge" class="badge badge-cyan" style="margin-left:8px;display:none">●</span>
+      </div>
+    </div>
+
+    <!-- Recording controls -->
+    <div class="card">
+      <div class="card-title">Gravação</div>
+      <div class="row">
+        <button class="btn-secondary" id="rec-btn" onclick="toggleRecording()">⏺ GRAVAR</button>
+        <button class="btn-secondary danger" id="clear-btn" onclick="clearMacro()">🗑 LIMPAR</button>
+      </div>
+      <div class="toggle-row" style="margin-top:12px">
+        <label>Gravar teclado</label>
+        <label class="toggle">
+          <input type="checkbox" id="macro-rec-keys" checked/>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div style="margin-top:12px">
+        <div class="card-title" style="margin-bottom:8px">Eventos gravados</div>
+        <div id="event-list">
+          <div class="event-item" style="color:var(--muted);justify-content:center;font-size:11px">
+            Sem eventos gravados
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Playback controls -->
+    <div class="card">
+      <div class="card-title">Reprodução</div>
+      <div class="grid-2" style="margin-bottom:12px">
+        <div class="field">
+          <label>Repetir</label>
+          <div class="seg-group" id="macro-repeat-group">
+            <button class="seg-btn active" data-val="once">1 vez</button>
+            <button class="seg-btn" data-val="count">N vezes</button>
+            <button class="seg-btn" data-val="infinite">Infinito</button>
+          </div>
+        </div>
+        <div class="field" id="macro-repeat-count-field" style="visibility:hidden">
+          <label>Número de repetições</label>
+          <input type="number" id="macro-repeat-count" value="10" min="1"/>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:12px">
+        <div class="field">
+          <label>Velocidade</label>
+          <select id="macro-speed">
+            <option value="0.25">0.25× (muito lenta)</option>
+            <option value="0.5">0.5×</option>
+            <option value="0.75">0.75×</option>
+            <option value="1" selected>1× (original)</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+            <option value="8">8× (máxima)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Pausa entre repetições (ms)</label>
+          <input type="number" id="macro-gap" value="0" min="0"/>
+        </div>
+      </div>
+      <div class="toggle-row" style="margin-bottom:10px">
+        <label>Humanizar (variar posição e tempos)</label>
+        <label class="toggle">
+          <input type="checkbox" id="macro-humanize"/>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="grid-2" id="macro-humanize-fields" style="display:none;margin-bottom:12px">
+        <div class="field">
+          <label>Desvio de posição (± px)</label>
+          <input type="number" id="macro-jitter-px" value="3" min="0" max="200"/>
+        </div>
+        <div class="field">
+          <label>Desvio de tempo (± %)</label>
+          <input type="number" id="macro-jitter-pct" value="15" min="0" max="100"/>
+        </div>
+      </div>
+      <div class="status-row" id="macro-progress-row" style="margin-bottom:12px;display:none">
+        <span class="status-label">Progresso</span>
+        <span class="status-value highlight" id="macro-progress"></span>
+      </div>
+      <div class="row">
+        <button class="btn-action btn-start" id="play-btn" onclick="toggleMacroPlayback()" style="font-size:13px">
+          ▶ REPRODUZIR
+        </button>
+      </div>
+    </div>
+
+    <!-- Add manual events -->
+    <div class="card">
+      <div class="card-title">Adicionar Evento Manual</div>
+      <div class="grid-3">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="ev-type">
+            <option value="click">Clique</option>
+            <option value="doubleclick">Duplo Clique</option>
+            <option value="move">Mover</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>X</label>
+          <input type="number" id="ev-x" value="0"/>
+        </div>
+        <div class="field">
+          <label>Y</label>
+          <input type="number" id="ev-y" value="0"/>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:10px">
+        <div class="field">
+          <label>Delay antes (ms)</label>
+          <input type="number" id="ev-delay" value="200" min="0"/>
+        </div>
+        <div class="field">
+          <label>Botão</label>
+          <select id="ev-btn">
+            <option value="left">Esquerdo</option>
+            <option value="right">Direito</option>
+            <option value="middle">Médio</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-secondary" style="margin-top:10px;width:100%" onclick="addManualEvent()">
+        + Adicionar Evento
+      </button>
+    </div>
+  </div><!-- /macro tab -->
+
+
+  <!-- ══════════════════════════════════ SCHEDULE TAB -->
+  <div class="tab-panel" id="tab-schedule">
+    <div class="card">
+      <div class="card-title">Modo de Repetição</div>
+      <div class="field" style="margin-bottom:12px">
+        <label>Parar quando</label>
+        <div class="seg-group" id="repeat-mode-group">
+          <button class="seg-btn active" data-val="infinite">Infinito</button>
+          <button class="seg-btn" data-val="count">Nº Cliques</button>
+          <button class="seg-btn" data-val="duration">Duração</button>
+        </div>
+      </div>
+      <div id="repeat-count-field" style="display:none" class="field">
+        <label>Número de cliques</label>
+        <input type="number" id="repeat-count" value="100" min="1"/>
+      </div>
+      <div id="repeat-duration-field" style="display:none" class="field">
+        <label>Duração (segundos)</label>
+        <input type="number" id="repeat-duration-s" value="10" min="1"/>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Início com Delay</div>
+      <div class="toggle-row" style="margin-bottom:10px">
+        <label>Ativar delay de arranque</label>
+        <label class="toggle">
+          <input type="checkbox" id="start-delay-toggle"/>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div id="start-delay-field" style="display:none" class="field">
+        <label>Delay de arranque (segundos)</label>
+        <input type="number" id="start-delay-s" value="3" min="1"/>
+      </div>
+      <div id="start-delay-countdown" style="display:none;text-align:center;padding:12px">
+        <span style="font-family:var(--font-mono);font-size:28px;color:var(--accent3)">A iniciar em <span id="countdown-val">3</span>s</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Resumo</div>
+      <div id="schedule-summary" style="font-family:var(--font-mono);font-size:12px;color:var(--muted);line-height:1.8">
+        Carregue em INICIAR para começar.<br/>
+        Configuração atual será apresentada aqui.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════ SETTINGS TAB -->
+  <div class="tab-panel" id="tab-settings">
+    <div class="card">
+      <div class="card-title">Perfis</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="profile-row">
+          <select id="profile-select"></select>
+          <button class="btn-secondary" onclick="loadSelectedProfile()">Carregar</button>
+          <button class="btn-secondary danger" onclick="deleteSelectedProfile()">Apagar</button>
+        </div>
+        <div class="profile-row">
+          <input type="text" id="profile-name" placeholder="Nome do perfil (ex.: Minecraft farm)" maxlength="40"/>
+          <button class="btn-secondary" onclick="saveCurrentProfile()">💾 Guardar</button>
+          <span></span>
+        </div>
+        <div class="row">
+          <button class="btn-secondary" onclick="exportSelectedProfile()">⬆ Exportar .json</button>
+          <button class="btn-secondary" onclick="importProfileFile()">⬇ Importar .json</button>
+        </div>
+      </div>
+      <div id="profile-msg" style="margin-top:12px;font-family:var(--font-mono);font-size:11px;color:var(--muted)">
+        Um perfil guarda o autoclicker, o agendamento e a macro gravada. Os atalhos são globais.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Atalhos Globais</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="hotkey-row">
+          <label>Iniciar / Parar autoclicker</label>
+          <button class="hotkey-btn" data-action="autoclicker"></button>
+          <button class="btn-secondary hotkey-reset" data-action="autoclicker">Repor</button>
+        </div>
+        <div class="hotkey-row">
+          <label>Iniciar / Parar gravação</label>
+          <button class="hotkey-btn" data-action="record"></button>
+          <button class="btn-secondary hotkey-reset" data-action="record">Repor</button>
+        </div>
+        <div class="hotkey-row">
+          <label>Reproduzir / Parar macro</label>
+          <button class="hotkey-btn" data-action="play"></button>
+          <button class="btn-secondary hotkey-reset" data-action="play">Repor</button>
+        </div>
+      </div>
+      <div id="hotkey-msg" style="margin-top:12px;font-family:var(--font-mono);font-size:11px;color:var(--muted)">
+        Clica num atalho e prime a nova combinação. Teclas F1–F24 podem ser usadas sozinhas;
+        as restantes precisam de Ctrl, Alt ou Shift. Esc cancela.
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+let acRunning = false;
+let macroRecording = false;
+let macroPlaying = false;
+let localEvents = [];
+let cpsTracker = { count: 0, last: Date.now() };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab switching
+// ─────────────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+    updateScheduleSummary();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Segmented controls
+// ─────────────────────────────────────────────────────────────────────────────
+function makeSegGroup(id, onChange) {
+  const group = document.getElementById(id);
+  group.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      onChange(btn.dataset.val);
+      scheduleSave();
+    });
+  });
+}
+function getSegVal(id) {
+  return document.querySelector(`#${id} .seg-btn.active`)?.dataset.val;
+}
+function setSegVal(id, val) {
+  document.querySelector(`#${id} .seg-btn[data-val="${val}"]`)?.click();
+}
+
+makeSegGroup('interval-mode-group', val => {
+  document.getElementById('fixed-interval').style.display = val === 'fixed' ? '' : 'none';
+  document.getElementById('random-interval').style.display = val === 'random' ? '' : 'none';
+});
+
+makeSegGroup('repeat-mode-group', val => {
+  document.getElementById('repeat-count-field').style.display    = val === 'count'    ? '' : 'none';
+  document.getElementById('repeat-duration-field').style.display = val === 'duration' ? '' : 'none';
+  updateScheduleSummary();
+});
+
+makeSegGroup('btn-group', () => updateScheduleSummary());
+makeSegGroup('click-mode-group', () => updateScheduleSummary());
+
+// Position toggle
+document.getElementById('use-current-pos').addEventListener('change', e => {
+  document.getElementById('fixed-pos-fields').style.display = e.target.checked ? 'none' : '';
+});
+
+// Start delay toggle
+document.getElementById('start-delay-toggle').addEventListener('change', e => {
+  document.getElementById('start-delay-field').style.display = e.target.checked ? '' : 'none';
+});
+
+// Pick position
+document.getElementById('pick-pos-btn').addEventListener('click', async () => {
+  const pos = await window.api.getCursorPos();
+  document.getElementById('target-x').value = pos.x;
+  document.getElementById('target-y').value = pos.y;
+  document.getElementById('cursor-indicator').textContent = `X: ${pos.x}  Y: ${pos.y}`;
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Build config from UI
+// ─────────────────────────────────────────────────────────────────────────────
+function buildConfig() {
+  return {
+    button:          getSegVal('btn-group') || 'left',
+    clickType:       getSegVal('click-mode-group') || 'single',
+    intervalMode:    getSegVal('interval-mode-group') || 'fixed',
+    intervalMs:      parseInt(document.getElementById('interval-ms').value) || 100,
+    intervalMinMs:   parseInt(document.getElementById('interval-min').value) || 50,
+    intervalMaxMs:   parseInt(document.getElementById('interval-max').value) || 300,
+    repeatMode:      getSegVal('repeat-mode-group') || 'infinite',
+    repeatCount:     parseInt(document.getElementById('repeat-count').value) || 100,
+    repeatDuration:  (parseInt(document.getElementById('repeat-duration-s').value) || 10) * 1000,
+    useCurrentPos:   document.getElementById('use-current-pos').checked,
+    targetX:         parseInt(document.getElementById('target-x').value) || 0,
+    targetY:         parseInt(document.getElementById('target-y').value) || 0,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Autoclicker
+// ─────────────────────────────────────────────────────────────────────────────
+let countdownTimer = null;
+
+function toggleAutoclicker() {
+  if (countdownTimer) {
+    // carregar outra vez durante a contagem cancela o arranque
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+    document.getElementById('start-delay-countdown').style.display = 'none';
+  } else if (acRunning) {
+    window.api.stopAutoclicker();
+  } else {
+    const delayEnabled = document.getElementById('start-delay-toggle').checked;
+    const delaySec = parseInt(document.getElementById('start-delay-s').value) || 3;
+    if (delayEnabled) {
+      startWithCountdown(delaySec, () => window.api.startAutoclicker(buildConfig()));
+    } else {
+      window.api.startAutoclicker(buildConfig());
+    }
+  }
+}
+
+function startWithCountdown(sec, cb) {
+  const el = document.getElementById('start-delay-countdown');
+  const val = document.getElementById('countdown-val');
+  el.style.display = '';
+  val.textContent = sec;
+  let remaining = sec;
+  countdownTimer = setInterval(() => {
+    remaining--;
+    val.textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+      el.style.display = 'none';
+      cb();
+    }
+  }, 1000);
+}
+
+window.api.on('autoclicker-status', ({ running }) => {
+  acRunning = running;
+  const btn = document.getElementById('ac-start-btn');
+  const dot = document.getElementById('ac-dot');
+  const lbl = document.getElementById('ac-status-label');
+  if (running) {
+    btn.textContent = '■ PARAR';
+    btn.classList.remove('btn-start'); btn.classList.add('btn-stop');
+    dot.className = 'status-dot active-green';
+    lbl.textContent = 'A CLICAR';
+    cpsTracker = { count: 0, last: Date.now() };
+  } else {
+    btn.textContent = '▶ INICIAR';
+    btn.classList.remove('btn-stop'); btn.classList.add('btn-start');
+    dot.className = 'status-dot';
+    lbl.textContent = 'PARADO';
+    document.getElementById('ac-cps').textContent = '0';
+  }
+});
+
+window.api.on('click-count', count => {
+  document.getElementById('ac-count').textContent = count;
+  document.getElementById('ac-counter').textContent = String(count).padStart(6, '0');
+  // CPS calc
+  const now = Date.now();
+  cpsTracker.count++;
+  const elapsed = (now - cpsTracker.last) / 1000;
+  if (elapsed >= 0.5) {
+    const cps = Math.round(cpsTracker.count / elapsed);
+    document.getElementById('ac-cps').textContent = cps;
+    cpsTracker = { count: 0, last: now };
+  }
+});
+
+// Hotkey from main process
+window.api.on('hotkey-toggle-autoclicker', () => toggleAutoclicker());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Macro
+// ─────────────────────────────────────────────────────────────────────────────
+// A lista de eventos vive no processo principal; aqui só se mostra e se pedem alterações
+function toggleRecording() {
+  if (macroRecording) window.api.stopRecording();
+  else window.api.startRecording();
+}
+
+function buildPlayOptions() {
+  const num = id => parseFloat(document.getElementById(id).value);
+  return {
+    repeatMode:  getSegVal('macro-repeat-group') || 'once',
+    repeatCount: num('macro-repeat-count') || 1,
+    speed:       num('macro-speed') || 1,
+    gapMs:       num('macro-gap') || 0,
+    humanize:    document.getElementById('macro-humanize').checked,
+    jitterPx:    num('macro-jitter-px') || 0,
+    jitterPct:   num('macro-jitter-pct') || 0,
+  };
+}
+
+function toggleMacroPlayback() {
+  if (macroPlaying) window.api.stopMacro();
+  else window.api.playMacro(buildPlayOptions());
+}
+
+makeSegGroup('macro-repeat-group', val => {
+  document.getElementById('macro-repeat-count-field').style.visibility = val === 'count' ? 'visible' : 'hidden';
+});
+
+document.getElementById('macro-humanize').addEventListener('change', e => {
+  document.getElementById('macro-humanize-fields').style.display = e.target.checked ? '' : 'none';
+});
+
+window.api.on('macro-progress', ({ rep, total, index, count }) => {
+  document.getElementById('macro-progress').textContent =
+    `Repetição ${rep}${total ? '/' + total : ''} · evento ${index}/${count}`;
+});
+
+function clearMacro() {
+  window.api.setMacroEvents([]);
+}
+
+function deleteEvent(i) {
+  window.api.setMacroEvents(localEvents.filter((_, j) => j !== i));
+}
+
+function addManualEvent() {
+  const delay = parseInt(document.getElementById('ev-delay').value);
+  const ev = {
+    type:   document.getElementById('ev-type').value,
+    x:      parseInt(document.getElementById('ev-x').value) || 0,
+    y:      parseInt(document.getElementById('ev-y').value) || 0,
+    delay:  Number.isNaN(delay) ? 200 : delay,
+    button: document.getElementById('ev-btn').value,
+  };
+  window.api.setMacroEvents([...localEvents, ev]);
+}
+
+function renderEventList() {
+  const list = document.getElementById('event-list');
+  if (!localEvents.length) {
+    list.innerHTML = '<div class="event-item" style="color:var(--muted);justify-content:center">Sem eventos gravados</div>';
+    return;
+  }
+  list.innerHTML = localEvents.map((ev, i) => {
+    const isKey = ev.type === 'keydown' || ev.type === 'keyup';
+    return `
+    <div class="event-item">
+      <span style="color:var(--muted);min-width:24px;font-size:10px">${i+1}</span>
+      ${isKey
+        ? `<span class="event-type key">${ev.type === 'keydown' ? 'tecla ↓' : 'tecla ↑'}</span>
+           <span class="event-coords">${ev.key}</span>`
+        : `<span class="event-type">${ev.type}</span>
+           <span class="event-coords">(${ev.x}, ${ev.y})</span>
+           ${ev.button ? `<span style="color:var(--accent3)">${ev.button}</span>` : ''}`}
+      <span class="event-delay">+${ev.delay}ms</span>
+      ${macroRecording ? '' : `<button class="event-del" title="Remover" onclick="deleteEvent(${i})">✕</button>`}
+    </div>`;
+  }).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+window.api.on('macro-status', ({ recording, playing, events }) => {
+  macroRecording = recording;
+  macroPlaying   = playing;
+  localEvents    = events || [];
+  const eventCount = localEvents.length;
+  renderEventList();
+
+  const dot   = document.getElementById('macro-dot');
+  const label = document.getElementById('macro-status-label');
+  const badge = document.getElementById('macro-badge');
+  const recBtn  = document.getElementById('rec-btn');
+  const playBtn = document.getElementById('play-btn');
+
+  document.getElementById('macro-event-count').textContent = eventCount;
+
+  if (recording) {
+    dot.className = 'status-dot active-red';
+    label.textContent = 'GRAVANDO';
+    badge.style.display = ''; badge.textContent = '⏺ REC'; badge.className = 'badge badge-red';
+    recBtn.textContent = '⏹ PARAR GRAVAÇÃO';
+  } else if (playing) {
+    dot.className = 'status-dot active-green';
+    label.textContent = 'REPRODUZINDO';
+    badge.style.display = ''; badge.textContent = '▶ PLAY'; badge.className = 'badge badge-green';
+    playBtn.textContent = '⏹ PARAR';
+    if (document.getElementById('macro-progress-row').style.display === 'none') {
+      document.getElementById('macro-progress').textContent = 'A começar…';
+      document.getElementById('macro-progress-row').style.display = '';
+    }
+  } else {
+    dot.className = 'status-dot';
+    label.textContent = 'INATIVO';
+    badge.style.display = 'none';
+    recBtn.textContent  = '⏺ GRAVAR';
+    playBtn.textContent = '▶ REPRODUZIR';
+    document.getElementById('macro-progress-row').style.display = 'none';
+  }
+});
+
+window.api.on('hotkey-play-macro', () => toggleMacroPlayback());
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Schedule summary
+// ─────────────────────────────────────────────────────────────────────────────
+function updateScheduleSummary() {
+  const mode = getSegVal('repeat-mode-group') || 'infinite';
+  const btn  = getSegVal('btn-group') || 'left';
+  const ct   = getSegVal('click-mode-group') || 'single';
+  const im   = getSegVal('interval-mode-group') || 'fixed';
+
+  let lines = [
+    `→ Botão:    ${btn}`,
+    `→ Modo:     ${ct === 'double' ? 'duplo clique' : 'clique simples'}`,
+    `→ Intervalo: ${im === 'random' ? 'aleatório (humano)' : document.getElementById('interval-ms').value + ' ms'}`,
+  ];
+
+  if (mode === 'infinite') lines.push('→ Parar:    nunca (manual)');
+  else if (mode === 'count') lines.push(`→ Parar:    após ${document.getElementById('repeat-count').value} cliques`);
+  else lines.push(`→ Parar:    após ${document.getElementById('repeat-duration-s').value}s`);
+
+  document.getElementById('schedule-summary').innerHTML = lines.join('<br/>');
+}
+
+document.querySelectorAll('input[type=number]').forEach(el => {
+  el.addEventListener('input', updateScheduleSummary);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Atalhos configuráveis
+// ─────────────────────────────────────────────────────────────────────────────
+const HOTKEY_HELP = document.getElementById('hotkey-msg').innerHTML;
+let hotkeys = {}, hotkeyDefaults = {}, hotkeyFailed = [];
+let capturingAction = null;
+
+const CODE_TO_ACCEL = {
+  NumpadAdd: 'numadd', NumpadSubtract: 'numsub', NumpadMultiply: 'nummult',
+  NumpadDivide: 'numdiv', NumpadDecimal: 'numdec',
+  ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right',
+  Space: 'Space', Insert: 'Insert', Delete: 'Delete', Home: 'Home', End: 'End',
+  PageUp: 'PageUp', PageDown: 'PageDown',
+};
+
+function codeToAccelKey(code) {
+  if (/^Key[A-Z]$/.test(code))   return code.slice(3);
+  if (/^Digit[0-9]$/.test(code)) return code.slice(5);
+  if (/^F([1-9]|1[0-9]|2[0-4])$/.test(code)) return code;
+  if (/^Numpad[0-9]$/.test(code)) return 'num' + code.slice(6);
+  return CODE_TO_ACCEL[code];
+}
+
+function hotkeyLabel(accel) {
+  return accel.replace(/\bnum(\d)$/, 'Num $1');
+}
+
+function showHotkeyMsg(text, isError) {
+  const el = document.getElementById('hotkey-msg');
+  el.innerHTML = text;
+  el.style.color = isError ? 'var(--accent2)' : 'var(--muted)';
+}
+
+function renderHotkeys() {
+  document.querySelectorAll('.hotkey-btn').forEach(btn => {
+    const a = btn.dataset.action;
+    btn.classList.toggle('capturing', a === capturingAction);
+    btn.classList.toggle('failed', hotkeyFailed.includes(a));
+    btn.textContent = a === capturingAction ? 'Prime uma tecla…' : hotkeyLabel(hotkeys[a] || '—');
+  });
+  for (const a of ['autoclicker', 'record', 'play']) {
+    document.getElementById('hk-' + a).textContent = hotkeyLabel(hotkeys[a] || '—');
+  }
+}
+
+function stopCapture() {
+  if (!capturingAction) return;
+  capturingAction = null;
+  window.api.resumeHotkeys();
+  renderHotkeys();
+}
+
+async function applyHotkey(action, accel) {
+  const res = await window.api.setHotkey(action, accel);
+  capturingAction = null;
+  hotkeys = res.hotkeys;
+  if (res.ok) {
+    hotkeyFailed = hotkeyFailed.filter(a => a !== action);
+    showHotkeyMsg(`Atalho guardado: <b>${hotkeyLabel(accel)}</b>`);
+  } else {
+    window.api.resumeHotkeys();
+    showHotkeyMsg(res.error, true);
+  }
+  renderHotkeys();
+}
+
+document.querySelectorAll('.hotkey-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (capturingAction === btn.dataset.action) return stopCapture();
+    if (!capturingAction) window.api.suspendHotkeys();
+    capturingAction = btn.dataset.action;
+    showHotkeyMsg(HOTKEY_HELP);
+    renderHotkeys();
+  });
+  btn.addEventListener('blur', () => setTimeout(() => {
+    if (capturingAction === btn.dataset.action) stopCapture();
+  }, 0));
+});
+
+document.querySelectorAll('.hotkey-reset').forEach(btn => {
+  btn.addEventListener('click', () => applyHotkey(btn.dataset.action, hotkeyDefaults[btn.dataset.action]));
+});
+
+window.addEventListener('keydown', e => {
+  if (!capturingAction) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (e.code === 'Escape') return stopCapture();
+  const key = codeToAccelKey(e.code);
+  if (!key) return; // modificador sozinho ou tecla não suportada: espera pela próxima
+  const mods = [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift'].filter(Boolean);
+  if (!mods.length && !/^F\d+$/.test(key)) {
+    showHotkeyMsg(`<b>${hotkeyLabel(key)}</b> sozinho bloquearia essa tecla em todo o Windows — junta Ctrl, Alt ou Shift.`, true);
+    return;
+  }
+  applyHotkey(capturingAction, [...mods, key].join('+'));
+}, true);
+
+(async () => {
+  ({ hotkeys, defaults: hotkeyDefaults, failed: hotkeyFailed } = await window.api.getHotkeys());
+  renderHotkeys();
+  if (hotkeyFailed.length) {
+    showHotkeyMsg('Alguns atalhos não puderam ser registados (estão a ser usados por outra aplicação). Escolhe outros.', true);
+  }
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Perfis
+// ─────────────────────────────────────────────────────────────────────────────
+let profileNames = [];
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function showProfileMsg(html, isError) {
+  const el = document.getElementById('profile-msg');
+  el.innerHTML = html;
+  el.style.color = isError ? 'var(--accent2)' : 'var(--muted)';
+}
+
+function renderProfiles({ names, active }) {
+  profileNames = names;
+  const sel = document.getElementById('profile-select');
+  sel.innerHTML = names.length
+    ? names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')
+    : '<option value="">(sem perfis guardados)</option>';
+  if (active && names.includes(active)) {
+    sel.value = active;
+    document.getElementById('profile-name').value = active;
+  }
+  document.getElementById('active-profile').textContent = active || '—';
+}
+
+async function saveCurrentProfile() {
+  const name = document.getElementById('profile-name').value.trim();
+  if (!name) return showProfileMsg('Escreve um nome para o perfil.', true);
+  if (profileNames.includes(name) && !confirm(`Substituir o perfil "${name}"?`)) return;
+  const res = await window.api.saveProfile(name, collectSettings());
+  if (!res.ok) return showProfileMsg(escapeHtml(res.error), true);
+  renderProfiles(res);
+  showProfileMsg(`Perfil <b>${escapeHtml(name)}</b> guardado (${localEvents.length} eventos de macro).`);
+}
+
+async function loadSelectedProfile() {
+  const name = document.getElementById('profile-select').value;
+  if (!name) return;
+  const res = await window.api.loadProfile(name);
+  if (!res.ok) return showProfileMsg(escapeHtml(res.error), true);
+  if (res.ui) applySettings(res.ui);
+  scheduleSave();
+  renderProfiles(res);
+  showProfileMsg(`Perfil <b>${escapeHtml(name)}</b> carregado.`);
+}
+
+async function deleteSelectedProfile() {
+  const name = document.getElementById('profile-select').value;
+  if (!name || !confirm(`Apagar o perfil "${name}"?`)) return;
+  renderProfiles(await window.api.deleteProfile(name));
+  document.getElementById('profile-name').value = '';
+  showProfileMsg(`Perfil <b>${escapeHtml(name)}</b> apagado.`);
+}
+
+async function exportSelectedProfile() {
+  const name = document.getElementById('profile-select').value;
+  const res = await window.api.exportProfile(name, collectSettings());
+  if (res.canceled) return;
+  if (!res.ok) return showProfileMsg(escapeHtml(res.error), true);
+  showProfileMsg(`Exportado para <b>${escapeHtml(res.filePath)}</b>`);
+}
+
+async function importProfileFile() {
+  const res = await window.api.importProfile();
+  if (res.canceled) return;
+  if (!res.ok) return showProfileMsg(escapeHtml(res.error), true);
+  renderProfiles(res);
+  document.getElementById('profile-select').value = res.name;
+  showProfileMsg(`Importado como <b>${escapeHtml(res.name)}</b>. Carrega-o para o usar.`);
+}
+
+window.api.listProfiles().then(renderProfiles);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Guardar / restaurar configurações da última sessão
+// ─────────────────────────────────────────────────────────────────────────────
+const SEG_IDS     = ['btn-group', 'click-mode-group', 'interval-mode-group', 'repeat-mode-group',
+                     'macro-repeat-group'];
+const NUMBER_IDS  = ['interval-ms', 'interval-min', 'interval-max', 'target-x', 'target-y',
+                     'repeat-count', 'repeat-duration-s', 'start-delay-s',
+                     'ev-x', 'ev-y', 'ev-delay',
+                     'macro-repeat-count', 'macro-gap', 'macro-jitter-px', 'macro-jitter-pct'];
+const TOGGLE_IDS  = ['use-current-pos', 'start-delay-toggle', 'macro-rec-keys', 'macro-humanize'];
+const SELECT_IDS  = ['ev-type', 'ev-btn', 'macro-speed'];
+
+let settingsLoaded = false;
+let saveTimer = null;
+
+function scheduleSave() {
+  if (!settingsLoaded) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => window.api.saveSettings(collectSettings()), 300);
+}
+
+function collectSettings() {
+  const s = { seg: {}, number: {}, toggle: {}, select: {} };
+  SEG_IDS.forEach(id    => s.seg[id]    = getSegVal(id));
+  NUMBER_IDS.forEach(id => s.number[id] = document.getElementById(id).value);
+  TOGGLE_IDS.forEach(id => s.toggle[id] = document.getElementById(id).checked);
+  SELECT_IDS.forEach(id => s.select[id] = document.getElementById(id).value);
+  s.tab = document.querySelector('.tab.active')?.dataset.tab;
+  return s;
+}
+
+function applySettings(s) {
+  if (!s) return;
+  // Perfis antigos tinham só o interruptor "Loop infinito"
+  if (s.toggle?.['macro-loop'] && !s.seg?.['macro-repeat-group']) {
+    s = { ...s, seg: { ...s.seg, 'macro-repeat-group': 'infinite' } };
+  }
+  Object.entries(s.seg || {}).forEach(([id, v]) => v && setSegVal(id, v));
+  Object.entries(s.number || {}).forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if (el && v !== undefined && v !== '') el.value = v;
+  });
+  Object.entries(s.toggle || {}).forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.checked = !!v;
+    el.dispatchEvent(new Event('change'));
+  });
+  Object.entries(s.select || {}).forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if (el && v) el.value = v;
+  });
+  if (s.tab) document.querySelector(`.tab[data-tab="${s.tab}"]`)?.click();
+}
+
+document.addEventListener('input',  scheduleSave);
+document.addEventListener('change', scheduleSave);
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', scheduleSave));
+
+(async () => {
+  applySettings(await window.api.loadSettings());
+  localEvents = await window.api.getMacroEvents();
+  document.getElementById('macro-event-count').textContent = localEvents.length;
+  renderEventList();
+  settingsLoaded = true;
+  updateScheduleSummary();
+})();
+
+updateScheduleSummary();
+</script>
+</body>
+</html>

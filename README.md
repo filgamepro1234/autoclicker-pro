@@ -111,9 +111,9 @@ Atalhos por defeito (podem ser mudados no separador **Definições**):
 ### `Cannot create symbolic link` ao compilar (winCodeSign)
 → O electron-builder precisa de privilégios para extrair ficheiros de macOS que não são usados. Extrai o pacote à mão sem essa pasta:
 
-```bash
-cd "%LOCALAPPDATA%electron-builderCachewinCodeSign"
-node_moduleszip-binwindza.exe x <ficheiro>.7z -owinCodeSign-2.6.0 -xr!darwin
+```bat
+cd /d "%LOCALAPPDATA%\electron-builder\Cache\winCodeSign"
+"<pasta do projeto>\node_modules\7zip-bin\win\x64\7za.exe" x <ficheiro>.7z -owinCodeSign-2.6.0 -xr!darwin
 ```
 
 Ou corre `npm run build` num terminal como Administrador / com o Modo de Programador do Windows ativo.
